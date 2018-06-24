@@ -1,0 +1,321 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "Location for all resources"
+            }
+        },
+        "virtualMachineName": {
+            "type": "string",
+            "defaultValue": "SophosXgFw",
+            "metadata": {
+                "description": "Name of the Sophos XG firewall"
+            }
+        },
+        "virtualMachineSize": {
+            "type": "string",
+            "defaultValue": "Standard_F2",
+            "metadata": {
+                "description": "VM size of the Sophos XG firewall"
+            }
+        },
+        "SophosXgImageName": {
+            "type": "string"
+        },
+        "SophosXgImageResourceGroup": {
+            "type": "string"
+        },
+        "adminPassword": {
+            "type": "securestring"
+        },
+        "virtualNetworkName": {
+            "type": "string",
+            "defaultValue": "SophosXgFw-vnet",
+            "metadata": {
+                "description": "Name of the virtual network of the Sophos XG firewall"
+            }
+        },
+        "virtualNetworkAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.10.0.0/16",
+            "metadata": {
+                "description": "CIDR of the virtual network of the Sophos XG firewall"
+            }
+        },
+        "PublicSubnetName": {
+            "type": "string",
+            "defaultValue": "SophosXgFw-vnet-public",
+            "metadata": {
+                "description": "Name of the public subnet of the Sophos XG firewall"
+            }
+        },
+        "PublicSubnetPrefix": {
+            "type": "string",
+            "defaultValue": "10.10.2.0/24",
+            "metadata": {
+                "description": "CIDR of the public subnet of the Sophos XG firewall"
+            }
+        },
+        "PrivateSubnetName": {
+            "type": "string",
+            "defaultValue": "SophosXgFw-vnet-private",
+            "metadata": {
+                "description": "Name of the private subnet of the Sophos XG firewall"
+            }
+        },
+        "PrivateSubnetPrefix": {
+            "type": "string",
+            "defaultValue": "10.10.1.0/24",
+            "metadata": {
+                "description": "CIDR of the private subnet of the Sophos XG firewall"
+            }
+        },
+        "PublicNetworkInterfaceName": {
+            "type": "string",
+            "defaultValue": "SophosXgFw-public-nic",
+            "metadata": {
+                "description": "Name of the public NIC of the Sophos XG firewall"
+            }
+        },
+        "PrivateNetworkInterfaceName": {
+            "type": "string",
+            "defaultValue": "SophosXgFw-private-nic",
+            "metadata": {
+                "description": "Name of the private NIC of the Sophos XG firewall"
+            }
+        },
+        "publicIpAddressName": {
+            "type": "string",
+            "defaultValue": "SophosXgFw-pip",
+            "metadata": {
+                "description": "Name of the public IP of the Sophos XG firewall"
+            }
+        },
+        "networkSecurityGroupName": {
+            "type": "string",
+            "defaultValue": "SophosXgFw-public-SecGrp",
+            "metadata": {
+                "description": "Name of the public NIC of the Sophos XG firewall"
+            }
+        },
+        "diagnosticsStorageAccountName": {
+            "type": "string"
+        },
+        "storageAccountType": {
+            "type": "string",
+            "defaultValue": "Standard_LRS"
+        }
+    },
+    "variables": {
+        "vnetId": "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+        "ImageId": "[resourceId(parameters('SophosXgImageResourceGroup'), 'Microsoft.Compute/images', parameters('SophosXgImageName'))]",
+        "PublicSubnetRef": "[concat(variables('vnetId'), '/subnets/', parameters('PublicSubnetName'))]",
+        "PrivateSubnetRef": "[concat(variables('vnetId'), '/subnets/', parameters('PrivateSubnetName'))]",
+        "diagnosticsStorageAccountType": "Standard_LRS",
+        "publicIpAddressType": "Dynamic",
+        "publicIpAddressSku": "Basic",
+        "adminUsername": "azureadmin"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[parameters('virtualMachineName')]",
+            "apiVersion": "2017-03-30",
+            "location": "[parameters('location')]",
+            "properties": {
+                "osProfile": {
+                    "computerName": "[parameters('virtualMachineName')]",
+                    "adminUsername": "[variables('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "hardwareProfile": {
+                    "vmSize": "[parameters('virtualMachineSize')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "id": "[variables('ImageId')]"
+                    },
+                    "osDisk": {
+                        "createOption": "FromImage",
+                        "managedDisk": {
+                            "storageAccountType": "[parameters('storageAccountType')]"
+                        }
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('PublicNetworkInterfaceName'))]",
+                            "properties": {
+                                "primary": true
+                            }
+                        },
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('PrivateNetworkInterfaceName'))]",
+                            "properties": {
+                                "primary": false
+                            }
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true,
+                        "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts', parameters('diagnosticsStorageAccountName')), '2015-06-15').primaryEndpoints['blob']]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkInterfaces/', parameters('PublicNetworkInterfaceName'))]",
+                "[concat('Microsoft.Network/networkInterfaces/', parameters('PrivateNetworkInterfaceName'))]",
+                "[concat('Microsoft.Storage/storageAccounts/', parameters('diagnosticsStorageAccountName'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[parameters('diagnosticsStorageAccountName')]",
+            "apiVersion": "2015-06-15",
+            "location": "[parameters('location')]",
+            "properties": {
+                "accountType": "[variables('diagnosticsStorageAccountType')]"
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[parameters('virtualNetworkName')]",
+            "apiVersion": "2017-08-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('virtualNetworkAddressPrefix')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[parameters('PublicSubnetName')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('PublicSubnetPrefix')]"
+                        }
+                    },
+                    {
+                        "name": "[parameters('PrivateSubnetName')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('PrivateSubnetPrefix')]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[parameters('PrivateNetworkInterfaceName')]",
+            "apiVersion": "2018-04-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "subnet": {
+                                "id": "[variables('PrivateSubnetRef')]"
+                            },
+                            "privateIPAllocationMethod": "Dynamic"
+                        }
+                    }
+                ]
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[parameters('PublicNetworkInterfaceName')]",
+            "apiVersion": "2018-04-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "subnet": {
+                                "id": "[variables('PublicSubnetRef')]"
+                            },
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIpAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIpAddresses', parameters('publicIpAddressName'))]"
+                            }
+                        }
+                    }
+                ],
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupName'))]"
+                }
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
+                "[concat('Microsoft.Network/publicIpAddresses/', parameters('publicIpAddressName'))]",
+                "[concat('Microsoft.Network/networkSecurityGroups/', parameters('networkSecurityGroupName'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.Network/publicIPAddresses",
+            "sku": {
+                "name": "[variables('publicIpAddressSku')]"
+            },
+            "name": "[parameters('publicIpAddressName')]",
+            "apiVersion": "2017-08-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "publicIPAllocationMethod": "[variables('publicIpAddressType')]"
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "name": "[parameters('networkSecurityGroupName')]",
+            "apiVersion": "2018-01-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "default-allow-webadmin",
+                        "properties": {
+                            "priority": 100,
+                            "protocol": "Tcp",
+                            "access": "Allow",
+                            "direction": "Inbound",
+                            "sourceAddressPrefix": "*",
+                            "sourcePortRange": "*",
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "4444"
+                        }
+                    },
+                    {
+                        "name": "default-allow-ssh",
+                        "properties": {
+                            "priority": 1000,
+                            "protocol": "Tcp",
+                            "access": "Allow",
+                            "direction": "Inbound",
+                            "sourceAddressPrefix": "*",
+                            "sourcePortRange": "*",
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "22"
+                        }
+                    }
+                ]
+            }
+        }
+    ],
+    "outputs": {
+        "adminUsername": {
+            "type": "string",
+            "value": "[variables('adminUsername')]"
+        }
+    }
+}
