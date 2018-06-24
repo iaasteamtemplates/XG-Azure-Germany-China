@@ -10,9 +10,9 @@ Deployment via template
 
 1) Press the appropriate deployment button and enter your Azure credentials when prompted.
 
-[![Deploy to Azure Germany](https://raw.githubusercontent.com/iaasteamtemplates/XG-Azure-Germany-China/master/DeployAzureGerman.png)](https://portal.microsoftazure.de/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fsophos-iaas%2Fxg-azure%2Fmaster%2FmainTemplate.json)
+[![Deploy to Azure Germany](https://raw.githubusercontent.com/iaasteamtemplates/XG-Azure-Germany-China/master/DeployAzureGerman.png)](https://portal.microsoftazure.de/#create/Microsoft.Template/uri/https://raw.githubusercontent.com/iaasteamtemplates/XG-Azure-Germany-China/master/sophos-xg-custom-image.json)
 
-
+[![Deploy to Azure China](https://raw.githubusercontent.com/iaasteamtemplates/XG-Azure-Germany-China/master/DeployAzureGerman.png)](https://portal.azure.cn/#create/Microsoft.Template/uri/https://raw.githubusercontent.com/iaasteamtemplates/XG-Azure-Germany-China/master/sophos-xg-custom-image.json)
 
 
 ***
@@ -20,7 +20,7 @@ Deployment via template
 Connect to the VM instance
 ==========================
 
-[https://full-dns-name:4444](https://full-dns-name:4444)
+[https://<public ip>:4444](https://<public ip>:4444)
 
 ***
 
